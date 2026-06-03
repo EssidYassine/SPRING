@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Spring Boot — Plateforme de Révision</title>
+<style>
+:root{
+  --bg:#0d1117;--card:#161b22;--border:#30363d;--accent:#6db33f;
+  --green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#bc8cff;
+  --orange:#ffa657;--text:#e6edf3;--muted:#8b949e;--hover:#21262d;
+  --spring:#6db33f;--spring2:#34302d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+
+/* BOOT SCREEN */
+#boot-screen{position:fixed;inset:0;background:#0d1117;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cascadia Code','Fira Code',monospace}
+#boot-screen .spring-logo{font-size:3.5rem;margin-bottom:24px;animation:pulse 1s infinite alternate}
+#boot-screen .boot-log{width:min(600px,92vw);font-size:clamp(10px,2.5vw,13px);color:#6db33f;overflow-x:hidden}
+#boot-screen .boot-log div{opacity:0;animation:fadein .3s forwards}
+#boot-screen .bar{width:min(400px,80vw);height:4px;background:#21262d;border-radius:2px;margin-top:20px;overflow:hidden}
+#boot-screen .bar-fill{height:100%;background:#6db33f;border-radius:2px;width:0;transition:width .1s}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+@keyframes fadein{to{opacity:1}}
+
+/* NAV */
+nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:4px;overflow-x:auto;position:sticky;top:0;z-index:100}
+nav button{background:none;border:none;color:var(--muted);padding:14px 16px;cursor:pointer;font-size:14px;white-space:nowrap;border-bottom:2px solid transparent;transition:.2s}
+nav button:hover{color:var(--text)}
+nav button.active{color:var(--spring);border-bottom-color:var(--spring)}
+.brand{font-weight:700;color:var(--text);padding:14px 16px;margin-right:8px;font-size:15px;white-space:nowrap}
+.nav-toggle{display:none;background:none;border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:6px;font-size:18px;cursor:pointer;margin-left:auto;flex-shrink:0}
+.nav-links{display:flex;align-items:center;gap:4px;overflow-x:auto}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#0d1117 0%,#1a2510 100%);border-bottom:1px solid var(--border);padding:48px 24px;text-align:center}
+.hero h1{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--spring),#90c050);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.hero p{color:var(--muted);font-size:1.05rem;max-width:600px;margin:0 auto}
+.hero .badges{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.badge{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:20px;font-size:13px}
+.badge.g{border-color:var(--green);color:var(--green)}
+.badge.b{border-color:var(--accent);color:var(--accent)}
+.badge.p{border-color:var(--purple);color:var(--purple)}
+.badge.o{border-color:var(--orange);color:var(--orange)}
+.badge.r{border-color:var(--red);color:var(--red)}
+
+/* TABS */
+.tab{display:none;padding:32px 24px;max-width:1100px;margin:0 auto}
+.tab.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
+.card h2{font-size:1.15rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h3{font-size:1rem;font-weight:600;margin:16px 0 8px;color:var(--spring)}
+.card p,.card li{color:var(--muted);margin-bottom:6px}
+.card ul,.card ol{padding-left:20px}
+.card li{margin-bottom:4px}
+
+/* GRID */
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+/* CODE */
+pre,code{font-family:'Cascadia Code','Fira Code',monospace}
+pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:13px;color:#e6edf3;margin:10px 0}
+code{background:#161b22;padding:2px 6px;border-radius:4px;font-size:13px;color:var(--orange)}
+.kw{color:#ff7b72}.cl{color:#79c0ff}.fn{color:#d2a8ff}.st{color:#a5d6ff}.cm{color:#8b949e}.an{color:#6db33f}.nu{color:#f2cc60}
+
+/* PILLS */
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin:2px}
+.pill.g{background:#1a3a2a;color:var(--green);border:1px solid var(--green)}
+.pill.b{background:#1a2a1a;color:var(--spring);border:1px solid var(--spring)}
+.pill.r{background:#3a1a1a;color:var(--red);border:1px solid var(--red)}
+.pill.y{background:#3a2a1a;color:var(--yellow);border:1px solid var(--yellow)}
+.pill.p{background:#2a1a3a;color:var(--purple);border:1px solid var(--purple)}
+.pill.o{background:#3a2500;color:var(--orange);border:1px solid var(--orange)}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:#1c2128;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border);color:var(--spring)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted)}
+tr:hover td{background:var(--hover)}
+.table-wrap{overflow-x:auto}
+
+/* QUIZ */
+.quiz-wrap{max-width:720px;margin:0 auto}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px}
+.q-card .qtext{font-size:1rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.q-card .opts label{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:8px;cursor:pointer;border:1px solid var(--border);transition:.2s;color:var(--muted)}
+.q-card .opts label:hover{background:var(--hover);color:var(--text)}
+.q-card .opts input[type=radio]{accent-color:var(--spring)}
+.q-card .opts label.correct{background:#1a3a2a;border-color:var(--green);color:var(--green)}
+.q-card .opts label.wrong{background:#3a1a1a;border-color:var(--red);color:var(--red)}
+.q-card .expl{background:#1c2128;border-left:3px solid var(--spring);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:var(--muted);margin-top:12px;display:none}
+.quiz-score{background:var(--card);border:1px solid var(--green);border-radius:12px;padding:24px;text-align:center;margin-bottom:20px}
+.quiz-score h2{font-size:2rem;color:var(--green);margin-bottom:8px}
+.btn{display:inline-block;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:.2s}
+.btn-primary{background:var(--spring);color:#000}
+.btn-primary:hover{opacity:.85}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--spring);color:var(--spring)}
+
+/* EXAM */
+.exam-card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:24px;overflow:hidden}
+.exam-header{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.exam-header h3{font-size:1.05rem;font-weight:700}
+.exam-meta{font-size:13px;color:var(--muted)}
+.exam-body{padding:24px;display:none}
+.exam-body.open{display:block}
+.eq{background:#1c2128;border-radius:10px;padding:16px;margin-bottom:14px}
+.eq .qn{font-size:12px;color:var(--muted);margin-bottom:6px}
+.eq .qt{font-weight:600;margin-bottom:10px}
+.eq .opts-list{list-style:none;margin-bottom:10px}
+.eq .opts-list li{padding:6px 10px;border-radius:6px;font-size:14px;color:var(--muted);margin-bottom:4px;cursor:pointer}
+.eq .opts-list li.correct-ans{background:#1a3a2a;color:var(--green);font-weight:600}
+.eq .ans-box{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;display:none;margin-top:8px}
+.eq .ans-box.show{display:block}
+.ans-toggle{font-size:12px;color:var(--spring);cursor:pointer;border:none;background:none;padding:0;margin-top:4px}
+.reveal-all-btn{background:var(--hover);border:1px solid var(--border);color:var(--spring);padding:7px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:16px}
+
+/* HOT */
+.hot-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.hot-card h3{color:var(--orange);margin-bottom:10px;font-size:1rem;display:flex;align-items:center;gap:8px}
+.frequency{background:#3a2500;color:var(--orange);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+
+/* DEFINITION SECTION */
+.def-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid var(--spring)}
+.def-term{font-size:1rem;font-weight:700;color:var(--spring);margin-bottom:8px}
+.def-body{color:var(--muted);font-size:14px;line-height:1.7}
+
+/* EXAM DEMAIN */
+.exam-demain-card{background:var(--card);border:2px solid var(--red);border-radius:12px;padding:24px;margin-bottom:20px}
+.exam-demain-card h2{color:var(--red);margin-bottom:16px}
+.step-card{background:#1c2128;border-radius:10px;padding:16px;margin-bottom:12px;border-left:3px solid var(--spring)}
+.step-num{font-size:11px;color:var(--spring);font-weight:700;margin-bottom:4px;text-transform:uppercase}
+.step-title{font-weight:700;font-size:1rem;margin-bottom:8px;color:var(--text)}
+.step-body{color:var(--muted);font-size:14px}
+
+/* ALERT */
+.alert{border-radius:8px;padding:12px 16px;margin:10px 0;font-size:14px}
+.alert.info{background:#1a2a1a;border-left:3px solid var(--spring);color:var(--spring)}
+.alert.warn{background:#3a2a1a;border-left:3px solid var(--yellow);color:var(--yellow)}
+.alert.danger{background:#3a1a1a;border-left:3px solid var(--red);color:var(--red)}
+.alert.success{background:#1a3a2a;border-left:3px solid var(--green);color:var(--green)}
+
+/* MOBILE */
+@media(max-width:768px){
+  nav{flex-wrap:wrap;padding:8px 14px;gap:0}
+  .nav-toggle{display:flex;align-items:center}
+  .nav-links{display:none;width:100%;flex-direction:column;align-items:stretch;padding:4px 0;border-top:1px solid var(--border);margin-top:8px}
+  .nav-links.open{display:flex}
+  .nav-links button{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border);border-radius:0}
+  .brand{padding:10px 0}
+  .hero{padding:28px 16px}
+  .hero h1{font-size:1.45rem}
+  .tab{padding:14px 10px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  pre{font-size:12px;padding:10px}
+  .card{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen">
+  <div class="spring-logo">🌿</div>
+  <div class="boot-log" id="bootLog"></div>
+  <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+</div>
+
+<nav>
+  <span class="brand">🌿 Spring Boot</span>
+  <button class="nav-toggle" onclick="toggleNav()">☰</button>
+  <div class="nav-links" id="navLinks">
+    <button onclick="showTab('home')" class="active" id="tnav-home">🏠 Accueil</button>
+    <button onclick="showTab('ch1')" id="tnav-ch1">📘 Ch1 — Intro</button>
+    <button onclick="showTab('ch2')" id="tnav-ch2">🔧 Ch2 — IoC/DI</button>
+    <button onclick="showTab('ch3')" id="tnav-ch3">🗄️ Ch3 — JPA</button>
+    <button onclick="showTab('ch4')" id="tnav-ch4">🎯 Ch4 — AOP</button>
+    <button onclick="showTab('ch5')" id="tnav-ch5">📦 Ch5 — DTO</button>
+    <button onclick="showTab('ch6')" id="tnav-ch6">⏱️ Ch6 — Scheduler</button>
+    <button onclick="showTab('defs')" id="tnav-defs">📖 Définitions</button>
+    <button onclick="showTab('quiz')" id="tnav-quiz">❓ Quiz</button>
+    <button onclick="showTab('exams')" id="tnav-exams">📝 Examens</button>
+    <button onclick="showTab('hot')" id="tnav-hot">🔥 Hot Topics</button>
+    <button onclick="showTab('demain')" id="tnav-demain" style="color:var(--red);border-color:var(--red)">🚨 Examen Demain</button>
+  </div>
+</nav>
+
+<!-- ═══════════ HOME ═══════════ -->
+<div class="tab active" id="tab-home">
+  <div class="hero">
+    <h1>🌿 Spring Boot — Révision Complète</h1>
+    <p>Plateforme de révision : cours, exemples de code, quiz, définitions et section examen de demain.</p>
+    <div class="badges">
+      <span class="badge b">6 Chapitres</span>
+      <span class="badge g">40+ Questions QCM</span>
+      <span class="badge p">Spring Data JPA</span>
+      <span class="badge o">Spring AOP</span>
+      <span class="badge r">Examen Demain 🚨</span>
+    </div>
+  </div>
+  <div style="max-width:1100px;margin:32px auto 0;padding:0 24px">
+    <div class="grid grid-3">
+      <div class="card" style="border-color:var(--spring);cursor:pointer" onclick="showTab('ch1')">
+        <h2>📘 Ch1 — Introduction Spring Boot</h2>
+        <p>Qu'est-ce que Spring Boot, auto-configuration, starters, @SpringBootApplication, embedded server.</p>
+        <br><span class="pill b">Auto-Config</span><span class="pill b">Starters</span><span class="pill b">IoC</span>
+      </div>
+      <div class="card" style="border-color:var(--purple);cursor:pointer" onclick="showTab('ch2')">
+        <h2>🔧 Ch2 — Injection de Dépendances</h2>
+        <p>IoC Container, @Autowired, @Component, @Service, @Repository, @Controller, @Bean, scopes.</p>
+        <br><span class="pill p">@Autowired</span><span class="pill p">@Bean</span><span class="pill p">Scopes</span>
+      </div>
+      <div class="card" style="border-color:var(--green);cursor:pointer" onclick="showTab('ch3')">
+        <h2>🗄️ Ch3 — Spring Data JPA</h2>
+        <p>@Entity, @Repository, JpaRepository, JPQL, associations (OneToMany, ManyToMany), findByKeyword.</p>
+        <br><span class="pill g">JpaRepository</span><span class="pill g">JPQL</span><span class="pill g">Associations</span>
+      </div>
+      <div class="card" style="border-color:var(--orange);cursor:pointer" onclick="showTab('ch4')">
+        <h2>🎯 Ch4 — Spring AOP</h2>
+        <p>Aspect Oriented Programming, @Aspect, @Before, @After, @Around, Pointcut, JoinPoint.</p>
+        <br><span class="pill o">@Aspect</span><span class="pill o">Advice</span><span class="pill o">Pointcut</span>
+      </div>
+      <div class="card" style="border-color:var(--yellow);cursor:pointer" onclick="showTab('ch5')">
+        <h2>📦 Ch5 — DTO &amp; Mapper</h2>
+        <p>Data Transfer Object, MapStruct, ModelMapper, séparation couches, avantages des DTOs.</p>
+        <br><span class="pill y">DTO</span><span class="pill y">MapStruct</span><span class="pill y">ModelMapper</span>
+      </div>
+      <div class="card" style="border-color:var(--red);cursor:pointer" onclick="showTab('ch6')">
+        <h2>⏱️ Ch6 — Spring Scheduler</h2>
+        <p>@Scheduled, cron expressions, fixedRate, fixedDelay, @EnableScheduling.</p>
+        <br><span class="pill r">@Scheduled</span><span class="pill r">Cron</span><span class="pill r">fixedRate</span>
+      </div>
+    </div>
+    <div class="card" style="border-color:var(--red);cursor:pointer;margin-top:0" onclick="showTab('demain')">
+      <h2>🚨 Section Examen Demain — PRIORITÉ ABSOLUE</h2>
+      <p>Associations, affectation/désaffectation, JPQL, Scheduler, 5 entités, Repo+Service+Controller, DTO, Maven, définitions.</p>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+        <span class="pill r">Associations</span><span class="pill r">Affectation</span><span class="pill r">Désaffectation</span>
+        <span class="pill r">JPQL</span><span class="pill r">Scheduler</span><span class="pill r">DTO</span><span class="pill r">Maven</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CH1 ═══════════ -->
+<div class="tab" id="tab-ch1">
+  <div class="card">
+    <h2>📘 Chapitre 1 — Introduction à Spring Boot</h2>
+    <h3>Qu'est-ce que Spring Boot ?</h3>
+    <p>Spring Boot est un framework Java basé sur Spring Framework qui simplifie la création d'applications standalone, prêtes pour la production. Il élimine la configuration XML manuelle grâce à l'<strong>auto-configuration</strong>.</p>
+    <h3>Avantages de Spring Boot</h3>
+    <ul>
+      <li>Auto-configuration : configure automatiquement les beans selon les dépendances présentes</li>
+      <li>Starters : ensembles de dépendances pré-configurées (spring-boot-starter-web, spring-boot-starter-data-jpa...)</li>
+      <li>Serveur embarqué : Tomcat/Jetty intégré, pas besoin de déployer sur un serveur externe</li>
+      <li>Actuator : monitoring et métriques intégrés</li>
+      <li>Convention over configuration : moins de code boilerplate</li>
+    </ul>
+    <h3>@SpringBootApplication</h3>
+    <pre><span class="an">@SpringBootApplication</span>  <span class="cm">// = @Configuration + @EnableAutoConfiguration + @ComponentScan</span>
+<span class="kw">public class</span> <span class="cl">MonApplication</span> {
+    <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+        SpringApplication.<span class="fn">run</span>(<span class="cl">MonApplication</span>.<span class="kw">class</span>, args);
+    }
+}</pre>
+    <h3>Structure d'un projet Spring Boot (Maven)</h3>
+    <pre>src/
+├── main/
+│   ├── java/com/example/
+│   │   ├── entities/        <span class="cm">// Entités JPA</span>
+│   │   ├── repositories/    <span class="cm">// Interfaces Repository</span>
+│   │   ├── services/        <span class="cm">// Logique métier</span>
+│   │   ├── controllers/     <span class="cm">// REST Controllers</span>
+│   │   └── dto/             <span class="cm">// Data Transfer Objects</span>
+│   └── resources/
+│       └── application.properties
+└── test/</pre>
+    <h3>application.properties — Configuration BDD</h3>
+    <pre>spring.datasource.url=jdbc:mysql://localhost:3306/mabd
+spring.datasource.username=root
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect</pre>
+    <h3>Maven — pom.xml essentiel</h3>
+    <pre><span class="st">&lt;parent&gt;</span>
+    <span class="st">&lt;groupId&gt;</span>org.springframework.boot<span class="st">&lt;/groupId&gt;</span>
+    <span class="st">&lt;artifactId&gt;</span>spring-boot-starter-parent<span class="st">&lt;/artifactId&gt;</span>
+    <span class="st">&lt;version&gt;</span>3.2.0<span class="st">&lt;/version&gt;</span>
+<span class="st">&lt;/parent&gt;</span>
+<span class="st">&lt;dependencies&gt;</span>
+    <span class="st">&lt;dependency&gt;</span>
+        <span class="st">&lt;groupId&gt;</span>org.springframework.boot<span class="st">&lt;/groupId&gt;</span>
+        <span class="st">&lt;artifactId&gt;</span>spring-boot-starter-web<span class="st">&lt;/artifactId&gt;</span>
+    <span class="st">&lt;/dependency&gt;</span>
+    <span class="st">&lt;dependency&gt;</span>
+        <span class="st">&lt;groupId&gt;</span>org.springframework.boot<span class="st">&lt;/groupId&gt;</span>
+        <span class="st">&lt;artifactId&gt;</span>spring-boot-starter-data-jpa<span class="st">&lt;/artifactId&gt;</span>
+    <span class="st">&lt;/dependency&gt;</span>
+    <span class="st">&lt;dependency&gt;</span>
+        <span class="st">&lt;groupId&gt;</span>com.mysql<span class="st">&lt;/groupId&gt;</span>
+        <span class="st">&lt;artifactId&gt;</span>mysql-connector-j<span class="st">&lt;/artifactId&gt;</span>
+    <span class="st">&lt;/dependency&gt;</span>
+<span class="st">&lt;/dependencies&gt;</span></pre>
+  </div>
+</div>
+
+<!-- ═══════════ CH2 ═══════════ -->
+<div class="tab" id="tab-ch2">
+  <div class="card">
+    <h2>🔧 Chapitre 2 — Injection des Dépendances (IoC / DI)</h2>
+    <h3>Concepts fondamentaux</h3>
+    <ul>
+      <li><strong>IoC (Inversion of Control)</strong> : le framework gère la création et le cycle de vie des objets (beans)</li>
+      <li><strong>DI (Dependency Injection)</strong> : les dépendances sont injectées automatiquement par le conteneur Spring</li>
+      <li><strong>ApplicationContext</strong> : le conteneur IoC de Spring (BeanFactory étendu)</li>
+    </ul>
+    <h3>Annotations de stéréotype</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Annotation</th><th>Couche</th><th>Rôle</th></tr>
+      <tr><td><code>@Component</code></td><td>Générique</td><td>Bean Spring générique</td></tr>
+      <tr><td><code>@Service</code></td><td>Service</td><td>Logique métier</td></tr>
+      <tr><td><code>@Repository</code></td><td>Persistance</td><td>Accès données + gestion exceptions JPA</td></tr>
+      <tr><td><code>@Controller</code></td><td>Web</td><td>Contrôleur MVC (vues)</td></tr>
+      <tr><td><code>@RestController</code></td><td>Web</td><td>@Controller + @ResponseBody (JSON/XML)</td></tr>
+      <tr><td><code>@Configuration</code></td><td>Config</td><td>Classe de configuration, définit des @Bean</td></tr>
+    </table></div>
+    <h3>Types d'injection</h3>
+    <pre><span class="cm">// 1. Injection par constructeur (recommandée)</span>
+<span class="an">@Service</span>
+<span class="kw">public class</span> <span class="cl">ActeurService</span> {
+    <span class="kw">private final</span> <span class="cl">ActeurRepository</span> repo;
+
+    <span class="kw">public</span> <span class="fn">ActeurService</span>(<span class="cl">ActeurRepository</span> repo) {  <span class="cm">// Spring injecte auto</span>
+        <span class="kw">this</span>.repo = repo;
+    }
+}
+
+<span class="cm">// 2. Injection par champ (simple mais moins testable)</span>
+<span class="an">@Service</span>
+<span class="kw">public class</span> <span class="cl">ActeurService</span> {
+    <span class="an">@Autowired</span>
+    <span class="kw">private</span> <span class="cl">ActeurRepository</span> repo;
+}
+
+<span class="cm">// 3. Injection par setter</span>
+<span class="an">@Autowired</span>
+<span class="kw">public void</span> <span class="fn">setRepo</span>(<span class="cl">ActeurRepository</span> repo) { <span class="kw">this</span>.repo = repo; }</pre>
+    <h3>@Bean et @Configuration</h3>
+    <pre><span class="an">@Configuration</span>
+<span class="kw">public class</span> <span class="cl">AppConfig</span> {
+    <span class="an">@Bean</span>
+    <span class="kw">public</span> <span class="cl">ModelMapper</span> <span class="fn">modelMapper</span>() {
+        <span class="kw">return new</span> <span class="cl">ModelMapper</span>();
+    }
+}</pre>
+    <h3>Scopes des Beans</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Scope</th><th>Description</th></tr>
+      <tr><td><code>singleton</code></td><td>Par défaut — une seule instance partagée</td></tr>
+      <tr><td><code>prototype</code></td><td>Nouvelle instance à chaque injection</td></tr>
+      <tr><td><code>request</code></td><td>Une instance par requête HTTP</td></tr>
+      <tr><td><code>session</code></td><td>Une instance par session HTTP</td></tr>
+    </table></div>
+  </div>
+</div>
+
+<!-- ═══════════ CH3 ═══════════ -->
+<div class="tab" id="tab-ch3">
+  <div class="card">
+    <h2>🗄️ Chapitre 3 — Spring Data JPA</h2>
+    <h3>Entité JPA — @Entity</h3>
+    <pre><span class="an">@Entity</span>
+<span class="an">@Table</span>(name = <span class="st">"acteurs"</span>)
+<span class="kw">public class</span> <span class="cl">Acteur</span> {
+    <span class="an">@Id</span>
+    <span class="an">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="kw">private</span> Long id;
+
+    <span class="an">@Column</span>(nullable = <span class="kw">false</span>)
+    <span class="kw">private</span> String nom;
+
+    <span class="kw">private</span> String nationalite;
+
+    <span class="cm">// Getters / Setters / Constructeurs</span>
+}</pre>
+    <h3>Repository — JpaRepository</h3>
+    <pre><span class="an">@Repository</span>
+<span class="kw">public interface</span> <span class="cl">ActeurRepository</span> <span class="kw">extends</span> <span class="cl">JpaRepository</span>&lt;<span class="cl">Acteur</span>, Long&gt; {
+    <span class="cm">// Méthodes dérivées (Spring génère le SQL automatiquement)</span>
+    List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">findByNom</span>(String nom);
+    List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">findByNomContaining</span>(String keyword);
+    List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">findByNationalite</span>(String nationalite);
+
+    <span class="cm">// Requête JPQL personnalisée</span>
+    <span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE a.nom LIKE %:keyword%"</span>)
+    List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">searchByKeyword</span>(<span class="an">@Param</span>(<span class="st">"keyword"</span>) String keyword);
+}</pre>
+    <h3>Associations JPA</h3>
+    <pre><span class="cm">// OneToMany — Un Projet a plusieurs Acteurs</span>
+<span class="an">@Entity</span>
+<span class="kw">public class</span> <span class="cl">Projet</span> {
+    <span class="an">@Id @GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="kw">private</span> Long id;
+    <span class="kw">private</span> String titre;
+
+    <span class="an">@ManyToMany</span>
+    <span class="an">@JoinTable</span>(
+        name = <span class="st">"projet_acteur"</span>,
+        joinColumns = <span class="an">@JoinColumn</span>(name = <span class="st">"projet_id"</span>),
+        inverseJoinColumns = <span class="an">@JoinColumn</span>(name = <span class="st">"acteur_id"</span>)
+    )
+    <span class="kw">private</span> List&lt;<span class="cl">Acteur</span>&gt; acteurs = <span class="kw">new</span> ArrayList&lt;&gt;();
+}
+
+<span class="an">@Entity</span>
+<span class="kw">public class</span> <span class="cl">Acteur</span> {
+    <span class="an">@ManyToMany</span>(mappedBy = <span class="st">"acteurs"</span>)
+    <span class="kw">private</span> List&lt;<span class="cl">Projet</span>&gt; projets = <span class="kw">new</span> ArrayList&lt;&gt;();
+}</pre>
+    <h3>Service — Opérations CRUD</h3>
+    <pre><span class="an">@Service</span>
+<span class="an">@Transactional</span>
+<span class="kw">public class</span> <span class="cl">ProjetService</span> {
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ProjetRepository</span> projetRepo;
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ActeurRepository</span> acteurRepo;
+
+    <span class="cm">// Affecter un acteur à un projet</span>
+    <span class="kw">public void</span> <span class="fn">affecter</span>(Long projetId, Long acteurId) {
+        <span class="cl">Projet</span> projet = projetRepo.<span class="fn">findById</span>(projetId).<span class="fn">orElseThrow</span>();
+        <span class="cl">Acteur</span> acteur = acteurRepo.<span class="fn">findById</span>(acteurId).<span class="fn">orElseThrow</span>();
+        projet.<span class="fn">getActeurs</span>().<span class="fn">add</span>(acteur);
+        projetRepo.<span class="fn">save</span>(projet);
+    }
+
+    <span class="cm">// Désaffecter un acteur d'un projet</span>
+    <span class="kw">public void</span> <span class="fn">desaffecter</span>(Long projetId, Long acteurId) {
+        <span class="cl">Projet</span> projet = projetRepo.<span class="fn">findById</span>(projetId).<span class="fn">orElseThrow</span>();
+        projet.<span class="fn">getActeurs</span>().<span class="fn">removeIf</span>(a -> a.<span class="fn">getId</span>().<span class="fn">equals</span>(acteurId));
+        projetRepo.<span class="fn">save</span>(projet);
+    }
+
+    <span class="cm">// Recherche par mot-clé</span>
+    <span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">searchByKeyword</span>(String keyword) {
+        <span class="kw">return</span> projetRepo.<span class="fn">findByTitreContaining</span>(keyword);
+    }
+}</pre>
+    <h3>Controller REST</h3>
+    <pre><span class="an">@RestController</span>
+<span class="an">@RequestMapping</span>(<span class="st">"/api/projets"</span>)
+<span class="kw">public class</span> <span class="cl">ProjetController</span> {
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ProjetService</span> service;
+
+    <span class="an">@GetMapping</span>
+    <span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">list</span>() { <span class="kw">return</span> service.<span class="fn">findAll</span>(); }
+
+    <span class="an">@PostMapping</span>
+    <span class="kw">public</span> <span class="cl">Projet</span> <span class="fn">create</span>(<span class="an">@RequestBody</span> <span class="cl">Projet</span> p) { <span class="kw">return</span> service.<span class="fn">save</span>(p); }
+
+    <span class="an">@PutMapping</span>(<span class="st">"/{projetId}/acteurs/{acteurId}"</span>)
+    <span class="kw">public void</span> <span class="fn">affecter</span>(<span class="an">@PathVariable</span> Long projetId, <span class="an">@PathVariable</span> Long acteurId) {
+        service.<span class="fn">affecter</span>(projetId, acteurId);
+    }
+
+    <span class="an">@DeleteMapping</span>(<span class="st">"/{projetId}/acteurs/{acteurId}"</span>)
+    <span class="kw">public void</span> <span class="fn">desaffecter</span>(<span class="an">@PathVariable</span> Long projetId, <span class="an">@PathVariable</span> Long acteurId) {
+        service.<span class="fn">desaffecter</span>(projetId, acteurId);
+    }
+
+    <span class="an">@GetMapping</span>(<span class="st">"/search"</span>)
+    <span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">search</span>(<span class="an">@RequestParam</span> String keyword) {
+        <span class="kw">return</span> service.<span class="fn">searchByKeyword</span>(keyword);
+    }
+}</pre>
+    <h3>JPQL — Java Persistence Query Language</h3>
+    <pre><span class="cm">// JPQL utilise les noms des CLASSES et ATTRIBUTS Java (pas les tables SQL)</span>
+<span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE a.nationalite = :nat"</span>)
+List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">findByNationalite</span>(<span class="an">@Param</span>(<span class="st">"nat"</span>) String nat);
+
+<span class="an">@Query</span>(<span class="st">"SELECT p FROM Projet p JOIN p.acteurs a WHERE a.id = :acteurId"</span>)
+List&lt;<span class="cl">Projet</span>&gt; <span class="fn">findProjetsByActeur</span>(<span class="an">@Param</span>(<span class="st">"acteurId"</span>) Long id);
+
+<span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE LOWER(a.nom) LIKE LOWER(CONCAT('%',:kw,'%'))"</span>)
+List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">searchActeurs</span>(<span class="an">@Param</span>(<span class="st">"kw"</span>) String kw);</pre>
+  </div>
+</div>
+
+<!-- ═══════════ CH4 ═══════════ -->
+<div class="tab" id="tab-ch4">
+  <div class="card">
+    <h2>🎯 Chapitre 4 — Spring AOP (Aspect Oriented Programming)</h2>
+    <h3>Concepts clés</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Terme</th><th>Définition</th></tr>
+      <tr><td><strong>Aspect</strong></td><td>Module qui encapsule une préoccupation transversale (logging, sécurité...)</td></tr>
+      <tr><td><strong>Advice</strong></td><td>Le code à exécuter (Before, After, Around...)</td></tr>
+      <tr><td><strong>Pointcut</strong></td><td>Expression qui sélectionne les JoinPoints où s'applique l'advice</td></tr>
+      <tr><td><strong>JoinPoint</strong></td><td>Point d'exécution du programme (appel de méthode)</td></tr>
+      <tr><td><strong>Weaving</strong></td><td>Processus qui lie l'aspect au code cible</td></tr>
+    </table></div>
+    <h3>Exemple d'Aspect — Logging</h3>
+    <pre><span class="an">@Aspect</span>
+<span class="an">@Component</span>
+<span class="kw">public class</span> <span class="cl">LoggingAspect</span> {
+
+    <span class="cm">// Avant toute méthode dans le package services</span>
+    <span class="an">@Before</span>(<span class="st">"execution(* com.example.services.*.*(..))"</span>)
+    <span class="kw">public void</span> <span class="fn">beforeMethod</span>(<span class="cl">JoinPoint</span> jp) {
+        System.out.<span class="fn">println</span>(<span class="st">"Appel : "</span> + jp.<span class="fn">getSignature</span>().<span class="fn">getName</span>());
+    }
+
+    <span class="cm">// Après exécution (succès ou exception)</span>
+    <span class="an">@After</span>(<span class="st">"execution(* com.example.services.*.*(..))"</span>)
+    <span class="kw">public void</span> <span class="fn">afterMethod</span>(<span class="cl">JoinPoint</span> jp) {
+        System.out.<span class="fn">println</span>(<span class="st">"Fin : "</span> + jp.<span class="fn">getSignature</span>().<span class="fn">getName</span>());
+    }
+
+    <span class="cm">// Autour de la méthode (contrôle complet)</span>
+    <span class="an">@Around</span>(<span class="st">"execution(* com.example.services.*.*(..))"</span>)
+    <span class="kw">public</span> Object <span class="fn">aroundMethod</span>(<span class="cl">ProceedingJoinPoint</span> pjp) <span class="kw">throws</span> Throwable {
+        <span class="kw">long</span> start = System.<span class="fn">currentTimeMillis</span>();
+        Object result = pjp.<span class="fn">proceed</span>();  <span class="cm">// Appel de la méthode réelle</span>
+        <span class="kw">long</span> duration = System.<span class="fn">currentTimeMillis</span>() - start;
+        System.out.<span class="fn">println</span>(<span class="st">"Durée : "</span> + duration + <span class="st">"ms"</span>);
+        <span class="kw">return</span> result;
+    }
+
+    <span class="cm">// Seulement si succès</span>
+    <span class="an">@AfterReturning</span>(pointcut = <span class="st">"execution(* com.example.services.*.*(..))"</span>, returning = <span class="st">"result"</span>)
+    <span class="kw">public void</span> <span class="fn">afterSuccess</span>(<span class="cl">JoinPoint</span> jp, Object result) { }
+
+    <span class="cm">// Seulement si exception</span>
+    <span class="an">@AfterThrowing</span>(pointcut = <span class="st">"execution(* com.example.services.*.*(..))"</span>, throwing = <span class="st">"ex"</span>)
+    <span class="kw">public void</span> <span class="fn">afterError</span>(<span class="cl">JoinPoint</span> jp, Exception ex) { }
+}</pre>
+    <h3>Syntaxe Pointcut</h3>
+    <pre><span class="st">"execution(* com.example.services.*.*(..))"</span>
+<span class="cm">//           ^   ^^^^^^^^^^^^^^^^^^^^^^^  ^  ^^^</span>
+<span class="cm">//           |   package.classe           |  args (..= tous)</span>
+<span class="cm">//        retour                       méthode (*=toutes)</span></pre>
+    <div class="alert info">Pour activer AOP, ajouter dans pom.xml : <code>spring-boot-starter-aop</code></div>
+  </div>
+</div>
+
+<!-- ═══════════ CH5 ═══════════ -->
+<div class="tab" id="tab-ch5">
+  <div class="card">
+    <h2>📦 Chapitre 5 — DTO &amp; Mapper</h2>
+    <h3>Qu'est-ce qu'un DTO ?</h3>
+    <p>Un <strong>Data Transfer Object</strong> est un objet simple qui transporte des données entre les couches sans logique métier. Il découple l'API externe de la structure interne des entités.</p>
+    <h3>Avantages des DTOs</h3>
+    <ul>
+      <li>Sécurité : ne pas exposer les champs sensibles de l'entité</li>
+      <li>Performance : envoyer seulement les données nécessaires</li>
+      <li>Découplage : l'API n'est pas liée au schéma de la BDD</li>
+      <li>Validation : appliquer des règles de validation à l'entrée</li>
+      <li>Évolution : modifier la BDD sans casser l'API</li>
+    </ul>
+    <h3>Exemple — Entité vs DTO</h3>
+    <pre><span class="cm">// Entité (avec mdp, données internes...)</span>
+<span class="an">@Entity</span>
+<span class="kw">public class</span> <span class="cl">Acteur</span> {
+    <span class="kw">private</span> Long id;
+    <span class="kw">private</span> String nom;
+    <span class="kw">private</span> String motDePasse; <span class="cm">// Ne pas exposer !</span>
+    <span class="kw">private</span> List&lt;<span class="cl">Projet</span>&gt; projets;
+}
+
+<span class="cm">// DTO (seulement ce dont le client a besoin)</span>
+<span class="kw">public class</span> <span class="cl">ActeurDTO</span> {
+    <span class="kw">private</span> Long id;
+    <span class="kw">private</span> String nom;
+    <span class="kw">private</span> String nationalite;
+    <span class="cm">// Getters, Setters, Constructeurs</span>
+}</pre>
+    <h3>Mapper Manuel</h3>
+    <pre><span class="an">@Component</span>
+<span class="kw">public class</span> <span class="cl">ActeurMapper</span> {
+    <span class="kw">public</span> <span class="cl">ActeurDTO</span> <span class="fn">toDTO</span>(<span class="cl">Acteur</span> acteur) {
+        <span class="cl">ActeurDTO</span> dto = <span class="kw">new</span> <span class="cl">ActeurDTO</span>();
+        dto.<span class="fn">setId</span>(acteur.<span class="fn">getId</span>());
+        dto.<span class="fn">setNom</span>(acteur.<span class="fn">getNom</span>());
+        dto.<span class="fn">setNationalite</span>(acteur.<span class="fn">getNationalite</span>());
+        <span class="kw">return</span> dto;
+    }
+
+    <span class="kw">public</span> <span class="cl">Acteur</span> <span class="fn">toEntity</span>(<span class="cl">ActeurDTO</span> dto) {
+        <span class="cl">Acteur</span> a = <span class="kw">new</span> <span class="cl">Acteur</span>();
+        a.<span class="fn">setNom</span>(dto.<span class="fn">getNom</span>());
+        a.<span class="fn">setNationalite</span>(dto.<span class="fn">getNationalite</span>());
+        <span class="kw">return</span> a;
+    }
+}</pre>
+    <h3>ModelMapper</h3>
+    <pre><span class="cm">// Dans pom.xml :</span>
+<span class="cm">// &lt;dependency&gt;&lt;groupId&gt;org.modelmapper&lt;/groupId&gt;&lt;artifactId&gt;modelmapper&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+
+<span class="an">@Bean</span>
+<span class="kw">public</span> <span class="cl">ModelMapper</span> <span class="fn">modelMapper</span>() { <span class="kw">return new</span> <span class="cl">ModelMapper</span>(); }
+
+<span class="cm">// Utilisation dans le service :</span>
+<span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ModelMapper</span> mapper;
+
+<span class="cl">ActeurDTO</span> dto = mapper.<span class="fn">map</span>(acteur, <span class="cl">ActeurDTO</span>.<span class="kw">class</span>);
+<span class="cl">Acteur</span> entity = mapper.<span class="fn">map</span>(dto, <span class="cl">Acteur</span>.<span class="kw">class</span>);</pre>
+    <h3>Service avec DTO</h3>
+    <pre><span class="an">@Service</span>
+<span class="kw">public class</span> <span class="cl">ActeurService</span> {
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ActeurRepository</span> repo;
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ModelMapper</span> mapper;
+
+    <span class="kw">public</span> List&lt;<span class="cl">ActeurDTO</span>&gt; <span class="fn">findAll</span>() {
+        <span class="kw">return</span> repo.<span class="fn">findAll</span>().stream()
+            .<span class="fn">map</span>(a -> mapper.<span class="fn">map</span>(a, <span class="cl">ActeurDTO</span>.<span class="kw">class</span>))
+            .<span class="fn">collect</span>(Collectors.<span class="fn">toList</span>());
+    }
+
+    <span class="kw">public</span> <span class="cl">ActeurDTO</span> <span class="fn">save</span>(<span class="cl">ActeurDTO</span> dto) {
+        <span class="cl">Acteur</span> entity = mapper.<span class="fn">map</span>(dto, <span class="cl">Acteur</span>.<span class="kw">class</span>);
+        <span class="kw">return</span> mapper.<span class="fn">map</span>(repo.<span class="fn">save</span>(entity), <span class="cl">ActeurDTO</span>.<span class="kw">class</span>);
+    }
+}</pre>
+  </div>
+</div>
+
+<!-- ═══════════ CH6 ═══════════ -->
+<div class="tab" id="tab-ch6">
+  <div class="card">
+    <h2>⏱️ Chapitre 6 — Spring Scheduler</h2>
+    <h3>Activer le Scheduler</h3>
+    <pre><span class="an">@SpringBootApplication</span>
+<span class="an">@EnableScheduling</span>  <span class="cm">// OBLIGATOIRE pour activer les tâches planifiées</span>
+<span class="kw">public class</span> <span class="cl">Application</span> { ... }</pre>
+    <h3>Types de planification</h3>
+    <div class="table-wrap"><table>
+      <tr><th>Attribut</th><th>Description</th><th>Exemple</th></tr>
+      <tr><td><code>fixedRate</code></td><td>Exécute toutes les N ms (depuis le début de la dernière)</td><td><code>fixedRate = 5000</code></td></tr>
+      <tr><td><code>fixedDelay</code></td><td>Attend N ms après la fin de la dernière exécution</td><td><code>fixedDelay = 3000</code></td></tr>
+      <tr><td><code>cron</code></td><td>Expression cron (planification précise)</td><td><code>cron = "0 0 8 * * ?"</code></td></tr>
+      <tr><td><code>initialDelay</code></td><td>Délai avant la première exécution</td><td><code>initialDelay = 1000</code></td></tr>
+    </table></div>
+    <h3>Expression Cron — Syntaxe</h3>
+    <pre><span class="cm">// Format : seconde minute heure jour-du-mois mois jour-de-semaine</span>
+<span class="cm">//          0-59   0-59   0-23  1-31          1-12  0-7 (0=Dimanche)</span>
+
+<span class="st">"0 0 8 * * ?"</span>     <span class="cm">// Tous les jours à 8h00</span>
+<span class="st">"0 30 9 * * MON"</span>  <span class="cm">// Tous les lundis à 9h30</span>
+<span class="st">"0 0 0 1 * ?"</span>     <span class="cm">// Le 1er de chaque mois à minuit</span>
+<span class="st">"0 0/15 * * * ?"</span>  <span class="cm">// Toutes les 15 minutes</span>
+<span class="st">"0 0 8-18 * * ?"</span>  <span class="cm">// Toutes les heures de 8h à 18h</span></pre>
+    <h3>Exemples de Schedulers</h3>
+    <pre><span class="an">@Component</span>
+<span class="kw">public class</span> <span class="cl">MonScheduler</span> {
+
+    <span class="an">@Autowired</span> <span class="kw">private</span> <span class="cl">ProjetService</span> projetService;
+
+    <span class="cm">// Tous les jours à 8h00</span>
+    <span class="an">@Scheduled</span>(cron = <span class="st">"0 0 8 * * ?"</span>)
+    <span class="kw">public void</span> <span class="fn">envoyerRapportQuotidien</span>() {
+        List&lt;<span class="cl">Projet</span>&gt; projets = projetService.<span class="fn">findAll</span>();
+        System.out.<span class="fn">println</span>(<span class="st">"Rapport quotidien : "</span> + projets.<span class="fn">size</span>() + <span class="st">" projets"</span>);
+        <span class="cm">// Logique d'envoi email, notification, etc.</span>
+    }
+
+    <span class="cm">// Toutes les 5 secondes</span>
+    <span class="an">@Scheduled</span>(fixedRate = <span class="nu">5000</span>)
+    <span class="kw">public void</span> <span class="fn">verifierEtat</span>() {
+        System.out.<span class="fn">println</span>(<span class="st">"Vérification état : "</span> + <span class="kw">new</span> <span class="cl">Date</span>());
+    }
+
+    <span class="cm">// Attendre 3s après la fin de la tâche précédente</span>
+    <span class="an">@Scheduled</span>(fixedDelay = <span class="nu">3000</span>, initialDelay = <span class="nu">1000</span>)
+    <span class="kw">public void</span> <span class="fn">nettoyage</span>() {
+        System.out.<span class="fn">println</span>(<span class="st">"Nettoyage effectué"</span>);
+    }
+}</pre>
+    <div class="alert warn">Sans <code>@EnableScheduling</code>, les méthodes <code>@Scheduled</code> ne s'exécutent PAS — erreur classique d'examen !</div>
+  </div>
+</div>
+
+<!-- ═══════════ DÉFINITIONS ═══════════ -->
+<div class="tab" id="tab-defs">
+  <div class="card">
+    <h2>📖 Toutes les Définitions</h2>
+    <div class="alert info">Toutes les définitions importantes à connaître pour l'examen</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🌿 Spring Boot</div>
+    <div class="def-body">Framework Java basé sur Spring qui facilite la création d'applications standalone et prêtes pour la production, en éliminant la configuration manuelle grâce à l'auto-configuration et aux starters.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🔄 IoC (Inversion of Control)</div>
+    <div class="def-body">Principe où le contrôle de la création et du cycle de vie des objets est délégué au framework (conteneur Spring) plutôt qu'au code de l'application. Au lieu que l'objet crée ses dépendances, c'est le conteneur qui les lui fournit.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">💉 Injection de Dépendances (DI)</div>
+    <div class="def-body">Mécanisme par lequel le conteneur Spring fournit automatiquement les dépendances d'un objet. Types : par constructeur (recommandé), par champ (@Autowired), par setter.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🫛 Bean Spring</div>
+    <div class="def-body">Objet géré par le conteneur IoC de Spring. Un bean est instancié, configuré et géré par le conteneur. Créé avec @Component, @Service, @Repository, @Controller, ou @Bean dans une @Configuration.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">⚙️ Auto-Configuration</div>
+    <div class="def-body">Mécanisme Spring Boot qui configure automatiquement les beans selon les dépendances présentes dans le classpath. Ex : si spring-boot-starter-data-jpa est présent, Spring configure automatiquement EntityManager, DataSource, etc.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📦 Starter</div>
+    <div class="def-body">Dépendance Maven/Gradle qui regroupe un ensemble cohérent de bibliothèques pré-configurées pour une fonctionnalité donnée. Ex : spring-boot-starter-web inclut Spring MVC + Tomcat + Jackson.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🗄️ JPA (Java Persistence API)</div>
+    <div class="def-body">Spécification Java qui définit comment mapper des objets Java vers des tables de base de données relationnelles (ORM). Hibernate est l'implémentation la plus utilisée. Spring Data JPA simplifie encore plus son utilisation.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📋 ORM (Object-Relational Mapping)</div>
+    <div class="def-body">Technique qui permet de manipuler une base de données relationnelle via des objets Java. Le framework ORM traduit les opérations sur les objets en requêtes SQL.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🏭 Repository</div>
+    <div class="def-body">Interface Spring Data qui abstrait l'accès aux données. JpaRepository fournit des méthodes CRUD prêtes à l'emploi (findAll, findById, save, delete) et permet de définir des méthodes dérivées (findByNom, findByKeywordContaining...).</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🔍 JPQL (Java Persistence Query Language)</div>
+    <div class="def-body">Langage de requête orienté objet basé sur SQL mais qui opère sur les entités Java et leurs attributs (pas sur les tables/colonnes SQL). Utilisé avec @Query. Ex : "SELECT a FROM Acteur a WHERE a.nom = :nom" où Acteur est la classe Java.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📤 DTO (Data Transfer Object)</div>
+    <div class="def-body">Objet simple (POJO) utilisé pour transporter des données entre les couches de l'application ou vers l'extérieur (API REST). Il ne contient pas de logique métier, seulement des données. Permet de découpler la structure interne de l'API publique.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🗺️ Mapper</div>
+    <div class="def-body">Composant qui convertit une entité en DTO et vice versa. Peut être manuel (@Component avec méthodes de conversion) ou automatique (ModelMapper, MapStruct qui génère le code à la compilation).</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🎯 AOP (Aspect Oriented Programming)</div>
+    <div class="def-body">Paradigme de programmation qui permet de séparer les préoccupations transversales (logging, sécurité, transactions...) du code métier principal. En Spring AOP, un Aspect est appliqué autour des méthodes ciblées par un Pointcut.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🔪 Aspect</div>
+    <div class="def-body">Module AOP qui encapsule une préoccupation transversale. Annoté avec @Aspect + @Component. Contient des Advices et des Pointcuts.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📍 Pointcut</div>
+    <div class="def-body">Expression qui définit quels JoinPoints (méthodes) sont interceptés par un Advice. Syntaxe : execution(* com.example.services.*.*(..))</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">⚡ Advice</div>
+    <div class="def-body">Action exécutée par un Aspect à un JoinPoint. Types : @Before (avant), @After (après, quoi qu'il arrive), @AfterReturning (après succès), @AfterThrowing (après exception), @Around (autour, contrôle total).</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">⏱️ Scheduler (Planificateur de tâches)</div>
+    <div class="def-body">Mécanisme Spring pour exécuter automatiquement des méthodes à des moments précis ou à intervalles réguliers. Activé avec @EnableScheduling, les méthodes sont annotées @Scheduled avec des expressions cron ou des intervalles en ms.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📅 Expression Cron</div>
+    <div class="def-body">Chaîne de 6 champs (sec min heure jour mois jour-semaine) qui définit quand exécuter une tâche. Ex : "0 0 8 * * ?" = tous les jours à 8h00. Le "?" signifie "non spécifié".</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🔗 Association JPA</div>
+    <div class="def-body">Relation entre entités JPA : @OneToOne, @OneToMany, @ManyToOne, @ManyToMany. Une association ManyToMany nécessite une table de jointure (@JoinTable). La gestion des associations (lazy/eager loading, cascade) est cruciale pour la performance.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🏗️ Maven</div>
+    <div class="def-body">Outil de build et gestion de dépendances Java. Utilise un fichier pom.xml pour déclarer les dépendances, plugins et configuration du projet. Les dépendances Spring Boot sont gérées via le spring-boot-starter-parent qui fixe les versions compatibles.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">🔄 @Transactional</div>
+    <div class="def-body">Annotation qui délimite une transaction de base de données. Si une exception survient, toutes les opérations de la méthode sont annulées (rollback). Appliquée au niveau de la classe Service.</div>
+  </div>
+
+  <div class="def-card">
+    <div class="def-term">📡 REST (Representational State Transfer)</div>
+    <div class="def-body">Architecture pour les API web basée sur HTTP. Utilise les verbes HTTP : GET (lire), POST (créer), PUT (modifier), DELETE (supprimer). @RestController = @Controller + @ResponseBody (retourne JSON directement).</div>
+  </div>
+</div>
+
+<!-- ═══════════ QUIZ ═══════════ -->
+<div class="tab" id="tab-quiz">
+  <div style="max-width:720px;margin:0 auto">
+    <div class="card">
+      <h2>❓ Quiz Global — Spring Boot</h2>
+      <p style="color:var(--muted)">Testez vos connaissances sur tous les chapitres.</p>
+      <div id="quizScore" class="quiz-score" style="display:none">
+        <h2 id="scoreText">0/0</h2>
+        <p id="scorePct"></p>
+        <button class="btn btn-primary" onclick="resetQuiz()" style="margin-top:12px">Recommencer</button>
+      </div>
+      <div id="quizContainer"></div>
+      <div id="quizActions" style="text-align:center;margin-top:16px">
+        <button class="btn btn-primary" onclick="submitQuiz()">Valider les réponses</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EXAMENS ═══════════ -->
+<div class="tab" id="tab-exams">
+  <div class="card">
+    <h2>📝 Examens — Questions types Spring Boot</h2>
+    <div class="alert warn">Ces questions représentent le style typique des examens Spring Boot</div>
+  </div>
+
+  <div class="exam-card">
+    <div class="exam-header" onclick="toggleExam(this)">
+      <h3>📝 Examen Type 1 — Spring Boot &amp; JPA</h3>
+      <div class="exam-meta">QCM + Questions ouvertes · 20 pts</div>
+    </div>
+    <div class="exam-body">
+      <button class="reveal-all-btn" onclick="revealAll(this)">👁 Révéler toutes les réponses</button>
+      <div class="eq">
+        <div class="qn">Q1 — QCM</div>
+        <div class="qt">Quelle annotation marque une classe comme composant Spring géré par le conteneur IoC ?</div>
+        <ul class="opts-list">
+          <li>A) @Entity</li>
+          <li class="correct-ans">B) @Component</li>
+          <li>C) @Autowired</li>
+          <li>D) @Bean</li>
+        </ul>
+      </div>
+      <div class="eq">
+        <div class="qn">Q2 — QCM</div>
+        <div class="qt">Quelle interface Spring Data fournit les méthodes CRUD de base (findAll, save, delete...) ?</div>
+        <ul class="opts-list">
+          <li>A) CrudRepository seulement</li>
+          <li class="correct-ans">B) JpaRepository</li>
+          <li>C) EntityManager</li>
+          <li>D) DataRepository</li>
+        </ul>
+      </div>
+      <div class="eq">
+        <div class="qn">Q3 — Question ouverte</div>
+        <div class="qt">Expliquez la différence entre @Service et @Repository. Pourquoi les distinguer ?</div>
+        <button class="ans-toggle" onclick="toggleAns(this)">Voir la réponse</button>
+        <div class="ans-box">@Service marque la couche logique métier. @Repository marque la couche d'accès aux données et ajoute la traduction des exceptions JPA (DataAccessException). Les distinguer améliore la lisibilité et permet à Spring d'appliquer des comportements spécifiques à chaque couche.</div>
+      </div>
+      <div class="eq">
+        <div class="qn">Q4 — Code</div>
+        <div class="qt">Écrivez une requête JPQL pour trouver tous les Acteurs dont le nom contient un mot-clé.</div>
+        <button class="ans-toggle" onclick="toggleAns(this)">Voir la réponse</button>
+        <div class="ans-box"><pre>@Query("SELECT a FROM Acteur a WHERE a.nom LIKE %:keyword%")
+List&lt;Acteur&gt; searchByKeyword(@Param("keyword") String keyword);</pre></div>
+      </div>
+      <div class="eq">
+        <div class="qn">Q5 — QCM</div>
+        <div class="qt">Quelle annotation est OBLIGATOIRE pour activer les tâches @Scheduled ?</div>
+        <ul class="opts-list">
+          <li>A) @EnableAsync</li>
+          <li>B) @EnableCaching</li>
+          <li class="correct-ans">C) @EnableScheduling</li>
+          <li>D) @EnableJpa</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="exam-card">
+    <div class="exam-header" onclick="toggleExam(this)">
+      <h3>📝 Examen Type 2 — AOP &amp; DTO</h3>
+      <div class="exam-meta">Questions ouvertes · 20 pts</div>
+    </div>
+    <div class="exam-body">
+      <button class="reveal-all-btn" onclick="revealAll(this)">👁 Révéler toutes les réponses</button>
+      <div class="eq">
+        <div class="qn">Q1</div>
+        <div class="qt">Définissez les termes : Aspect, Advice, Pointcut, JoinPoint dans Spring AOP.</div>
+        <button class="ans-toggle" onclick="toggleAns(this)">Voir la réponse</button>
+        <div class="ans-box">• Aspect : Module qui encapsule une préoccupation transversale (@Aspect + @Component)<br>• Advice : Code à exécuter (@Before, @After, @Around...)<br>• Pointcut : Expression qui sélectionne les méthodes cibles (execution(...))<br>• JoinPoint : Point précis d'exécution (appel de méthode intercepté)</div>
+      </div>
+      <div class="eq">
+        <div class="qn">Q2</div>
+        <div class="qt">Quels sont les avantages des DTOs ? Pourquoi ne pas exposer directement les entités JPA ?</div>
+        <button class="ans-toggle" onclick="toggleAns(this)">Voir la réponse</button>
+        <div class="ans-box">1. Sécurité : cacher les champs sensibles (mot de passe)<br>2. Performance : envoyer seulement les données utiles<br>3. Découplage : modifier la BDD sans casser l'API<br>4. Validation : règles d'entrée indépendantes<br>5. Éviter les boucles infinies JSON avec les associations bidirectionnelles</div>
+      </div>
+      <div class="eq">
+        <div class="qn">Q3</div>
+        <div class="qt">Écrivez un aspect Spring qui logue le nom de chaque méthode appelée dans le package services.</div>
+        <button class="ans-toggle" onclick="toggleAns(this)">Voir la réponse</button>
+        <div class="ans-box"><pre>@Aspect
+@Component
+public class LoggingAspect {
+    @Before("execution(* com.example.services.*.*(..))")
+    public void logBefore(JoinPoint jp) {
+        System.out.println("Appel : " + jp.getSignature().getName());
+    }
+}</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ HOT TOPICS ═══════════ -->
+<div class="tab" id="tab-hot">
+  <div class="card">
+    <h2>🔥 Hot Topics — Ce qui tombe souvent à l'examen</h2>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×5</span> Associations ManyToMany + Affectation/Désaffectation</h3>
+    <p>La gestion des associations entre entités, l'ajout/suppression dans la liste et le save() sont systématiquement demandés.</p>
+    <div class="alert danger">N'oubliez pas : il faut faire un <code>save()</code> après avoir modifié la liste !</div>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×4</span> JPQL avec @Query et @Param</h3>
+    <p>Écrire une requête JPQL personnalisée avec paramètre nommé. Attention : noms des CLASSES Java, pas des tables SQL.</p>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×4</span> @Scheduled avec expression Cron</h3>
+    <p>Syntaxe cron : "0 0 8 * * ?" = tous les jours à 8h. Ne pas oublier @EnableScheduling sur la classe principale.</p>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×3</span> Structure Repo + Service + Controller</h3>
+    <p>Écrire les 3 couches complètes pour une entité donnée. Savoir quelle annotation va où.</p>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×3</span> Définitions (IoC, DI, DTO, AOP, JPQL)</span></h3>
+    <p>Questions de définition courtes. Connaître les différences : @Component vs @Service vs @Repository.</p>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×3</span> Avantages (Spring Boot, DTO, Maven, AOP)</h3>
+    <p>Lister 3-5 avantages. Apprendre les mots-clés : auto-configuration, couplage faible, testabilité, sécurité...</p>
+  </div>
+  <div class="hot-card">
+    <h3><span class="frequency">×2</span> findByKeyword — Repository et Service</h3>
+    <p>Méthode dérivée Spring Data ou @Query JPQL, puis appel dans le service et exposition via @GetMapping avec @RequestParam.</p>
+  </div>
+</div>
+
+<!-- ═══════════ EXAMEN DEMAIN ═══════════ -->
+<div class="tab" id="tab-demain">
+  <div class="exam-demain-card">
+    <h2>🚨 Examen Demain — Plan de Révision Ciblé</h2>
+    <div class="alert danger">Concentrez-vous sur ces 6 points exactement — ce sont les sujets annoncés !</div>
+  </div>
+
+  <!-- STRUCTURE PROJET -->
+  <div class="card" style="border-color:var(--purple)">
+    <h2>🏗️ Structure du Projet à Maîtriser</h2>
+    <p style="color:var(--muted);margin-bottom:16px"><strong>5 classes Entity + Repo + Service + Controller pour chaque</strong></p>
+    <pre><span class="cm">// Exemple : Acteur, Projet, Film, Role, Studio (5 entités)</span>
+
+<span class="cm">// entities/Acteur.java</span>
+<span class="an">@Entity</span> <span class="kw">public class</span> <span class="cl">Acteur</span> { <span class="an">@Id @GeneratedValue</span> Long id; String nom; String nationalite; }
+
+<span class="cm">// repositories/ActeurRepository.java</span>
+<span class="an">@Repository</span> <span class="kw">public interface</span> <span class="cl">ActeurRepository</span> <span class="kw">extends</span> <span class="cl">JpaRepository</span>&lt;<span class="cl">Acteur</span>, Long&gt; { }
+
+<span class="cm">// services/ActeurService.java</span>
+<span class="an">@Service</span> <span class="kw">public class</span> <span class="cl">ActeurService</span> { <span class="an">@Autowired</span> <span class="cl">ActeurRepository</span> repo; ... }
+
+<span class="cm">// controllers/ActeurController.java</span>
+<span class="an">@RestController @RequestMapping</span>(<span class="st">"/api/acteurs"</span>) <span class="kw">public class</span> <span class="cl">ActeurController</span> { ... }</pre>
+  </div>
+
+  <!-- POINT 1 : AFFECTATION -->
+  <div class="step-card">
+    <div class="step-num">Point 1</div>
+    <div class="step-title">Affectation + Ajout</div>
+    <div class="step-body">Affecter un acteur à un projet (ManyToMany) + Sauvegarder</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// Service — affecter un acteur à un projet</span>
+<span class="an">@Transactional</span>
+<span class="kw">public void</span> <span class="fn">affecterActeurAuProjet</span>(Long projetId, Long acteurId) {
+    <span class="cl">Projet</span> projet = projetRepo.<span class="fn">findById</span>(projetId)
+        .<span class="fn">orElseThrow</span>(() -> <span class="kw">new</span> <span class="cl">RuntimeException</span>(<span class="st">"Projet non trouvé"</span>));
+    <span class="cl">Acteur</span> acteur = acteurRepo.<span class="fn">findById</span>(acteurId)
+        .<span class="fn">orElseThrow</span>(() -> <span class="kw">new</span> <span class="cl">RuntimeException</span>(<span class="st">"Acteur non trouvé"</span>));
+
+    projet.<span class="fn">getActeurs</span>().<span class="fn">add</span>(acteur);  <span class="cm">// Ajout dans la liste</span>
+    projetRepo.<span class="fn">save</span>(projet);           <span class="cm">// OBLIGATOIRE pour persister</span>
+}
+
+<span class="cm">// Controller</span>
+<span class="an">@PutMapping</span>(<span class="st">"/{projetId}/acteurs/{acteurId}"</span>)
+<span class="kw">public</span> ResponseEntity&lt;Void&gt; <span class="fn">affecter</span>(<span class="an">@PathVariable</span> Long projetId, <span class="an">@PathVariable</span> Long acteurId) {
+    service.<span class="fn">affecterActeurAuProjet</span>(projetId, acteurId);
+    <span class="kw">return</span> ResponseEntity.<span class="fn">ok</span>().<span class="fn">build</span>();
+}</pre>
+  </div>
+
+  <!-- POINT 2 : LIST -->
+  <div class="step-card">
+    <div class="step-num">Point 2</div>
+    <div class="step-title">Liste — Acteurs d'un Projet &amp; Projets d'un Acteur</div>
+    <div class="step-body">Afficher la liste des acteurs d'un projet, et les projets d'un acteur</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// Service</span>
+<span class="kw">public</span> List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">getActeursOfProjet</span>(Long projetId) {
+    <span class="cl">Projet</span> projet = projetRepo.<span class="fn">findById</span>(projetId).<span class="fn">orElseThrow</span>();
+    <span class="kw">return</span> projet.<span class="fn">getActeurs</span>();
+}
+
+<span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">getProjetsOfActeur</span>(Long acteurId) {
+    <span class="cl">Acteur</span> acteur = acteurRepo.<span class="fn">findById</span>(acteurId).<span class="fn">orElseThrow</span>();
+    <span class="kw">return</span> acteur.<span class="fn">getProjets</span>();
+}
+
+<span class="cm">// Controller</span>
+<span class="an">@GetMapping</span>(<span class="st">"/{projetId}/acteurs"</span>)
+<span class="kw">public</span> List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">listActeurs</span>(<span class="an">@PathVariable</span> Long projetId) {
+    <span class="kw">return</span> service.<span class="fn">getActeursOfProjet</span>(projetId);
+}
+
+<span class="an">@GetMapping</span>(<span class="st">"/acteurs/{acteurId}/projets"</span>)
+<span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">listProjets</span>(<span class="an">@PathVariable</span> Long acteurId) {
+    <span class="kw">return</span> service.<span class="fn">getProjetsOfActeur</span>(acteurId);
+}</pre>
+  </div>
+
+  <!-- POINT 3 : KEYWORD -->
+  <div class="step-card">
+    <div class="step-num">Point 3</div>
+    <div class="step-title">Recherche par Keyword — Repo + Service + Controller</div>
+    <div class="step-body">findByKeyword dans le Repository, appel dans Service, exposé via @GetMapping avec @RequestParam</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// Repository</span>
+<span class="an">@Repository</span>
+<span class="kw">public interface</span> <span class="cl">ProjetRepository</span> <span class="kw">extends</span> <span class="cl">JpaRepository</span>&lt;<span class="cl">Projet</span>, Long&gt; {
+    <span class="cm">// Méthode dérivée (Spring génère le SQL automatiquement)</span>
+    List&lt;<span class="cl">Projet</span>&gt; <span class="fn">findByTitreContaining</span>(String keyword);
+
+    <span class="cm">// OU avec JPQL personnalisée</span>
+    <span class="an">@Query</span>(<span class="st">"SELECT p FROM Projet p WHERE p.titre LIKE %:keyword%"</span>)
+    List&lt;<span class="cl">Projet</span>&gt; <span class="fn">searchByKeyword</span>(<span class="an">@Param</span>(<span class="st">"keyword"</span>) String keyword);
+}
+
+<span class="cm">// Service</span>
+<span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">searchByKeyword</span>(String keyword) {
+    <span class="kw">return</span> projetRepo.<span class="fn">findByTitreContaining</span>(keyword);
+}
+
+<span class="cm">// Controller</span>
+<span class="an">@GetMapping</span>(<span class="st">"/search"</span>)
+<span class="kw">public</span> List&lt;<span class="cl">Projet</span>&gt; <span class="fn">search</span>(<span class="an">@RequestParam</span> String keyword) {
+    <span class="kw">return</span> service.<span class="fn">searchByKeyword</span>(keyword);
+}
+<span class="cm">// Appel : GET /api/projets/search?keyword=action</span></pre>
+  </div>
+
+  <!-- POINT 4 : JPQL -->
+  <div class="step-card">
+    <div class="step-num">Point 4</div>
+    <div class="step-title">JPQL — Requêtes personnalisées</div>
+    <div class="step-body">Maîtriser la syntaxe JPQL avec @Query et @Param</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// JPQL = SQL mais sur les CLASSES Java, pas les tables</span>
+
+<span class="cm">// Sélection simple</span>
+<span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE a.nationalite = :nat"</span>)
+List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">findByNationalite</span>(<span class="an">@Param</span>(<span class="st">"nat"</span>) String nat);
+
+<span class="cm">// LIKE (recherche partielle)</span>
+<span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE a.nom LIKE %:keyword%"</span>)
+List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">searchActeurs</span>(<span class="an">@Param</span>(<span class="st">"keyword"</span>) String keyword);
+
+<span class="cm">// Jointure entre entités</span>
+<span class="an">@Query</span>(<span class="st">"SELECT p FROM Projet p JOIN p.acteurs a WHERE a.id = :acteurId"</span>)
+List&lt;<span class="cl">Projet</span>&gt; <span class="fn">findProjetsByActeur</span>(<span class="an">@Param</span>(<span class="st">"acteurId"</span>) Long acteurId);
+
+<span class="cm">// Plusieurs conditions</span>
+<span class="an">@Query</span>(<span class="st">"SELECT a FROM Acteur a WHERE a.nationalite = :nat AND a.nom LIKE %:keyword%"</span>)
+List&lt;<span class="cl">Acteur</span>&gt; <span class="fn">searchByNatAndKeyword</span>(<span class="an">@Param</span>(<span class="st">"nat"</span>) String nat, <span class="an">@Param</span>(<span class="st">"keyword"</span>) String keyword);</pre>
+    <div class="alert warn">JPQL utilise les noms des <strong>classes Java</strong> (Acteur, Projet) et leurs <strong>attributs</strong> (nom, nationalite), PAS les noms des tables SQL !</div>
+  </div>
+
+  <!-- POINT 5 : SCHEDULER -->
+  <div class="step-card">
+    <div class="step-num">Point 5</div>
+    <div class="step-title">Scheduler — Tous les jours à une heure précise + Implémentation</div>
+    <div class="step-body">@EnableScheduling + @Scheduled(cron) + méthode qui appelle un service</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// ÉTAPE 1 : Activer dans la classe principale</span>
+<span class="an">@SpringBootApplication</span>
+<span class="an">@EnableScheduling</span>  <span class="cm">// ← NE PAS OUBLIER</span>
+<span class="kw">public class</span> <span class="cl">Application</span> {
+    <span class="kw">public static void</span> <span class="fn">main</span>(String[] args) {
+        SpringApplication.<span class="fn">run</span>(<span class="cl">Application</span>.<span class="kw">class</span>, args);
+    }
+}
+
+<span class="cm">// ÉTAPE 2 : Créer le composant Scheduler</span>
+<span class="an">@Component</span>
+<span class="kw">public class</span> <span class="cl">ProjetScheduler</span> {
+
+    <span class="an">@Autowired</span>
+    <span class="kw">private</span> <span class="cl">ProjetService</span> projetService;
+
+    <span class="cm">// Tous les jours à 8h00 du matin</span>
+    <span class="an">@Scheduled</span>(cron = <span class="st">"0 0 8 * * ?"</span>)
+    <span class="kw">public void</span> <span class="fn">tacheQuotidienne</span>() {
+        System.out.<span class="fn">println</span>(<span class="st">"Tâche exécutée à : "</span> + <span class="kw">new</span> <span class="cl">Date</span>());
+        List&lt;<span class="cl">Projet</span>&gt; projets = projetService.<span class="fn">findAll</span>();
+        System.out.<span class="fn">println</span>(<span class="st">"Nombre de projets : "</span> + projets.<span class="fn">size</span>());
+        <span class="cm">// Logique métier : envoi rapport, nettoyage, notification...</span>
+    }
+
+    <span class="cm">// Tous les jours à 23h30</span>
+    <span class="an">@Scheduled</span>(cron = <span class="st">"0 30 23 * * ?"</span>)
+    <span class="kw">public void</span> <span class="fn">nettoyageQuotidien</span>() {
+        System.out.<span class="fn">println</span>(<span class="st">"Nettoyage nocturne lancé..."</span>);
+    }
+}
+
+<span class="cm">// Aide-mémoire Cron :
+// "0  0  8  *  *  ?" → sec=0 min=0 heure=8 tousLesjours
+// "0  0  9  *  *  MON" → Chaque lundi à 9h
+// "0  */30  *  *  *  ?" → Toutes les 30 minutes</span></pre>
+    <div class="alert success">Format cron : <strong>sec min heure jour mois jour-semaine</strong> — "0 0 8 * * ?" = chaque jour à 8h00</div>
+  </div>
+
+  <!-- POINT 6 : DÉSAFFECTATION -->
+  <div class="step-card">
+    <div class="step-num">Point 6</div>
+    <div class="step-title">Désaffectation — Retirer une association</div>
+    <div class="step-body">Supprimer un acteur d'un projet (removeIf) + save()</div>
+  </div>
+  <div class="card">
+    <pre><span class="cm">// Service — désaffecter un acteur d'un projet</span>
+<span class="an">@Transactional</span>
+<span class="kw">public void</span> <span class="fn">desaffecterActeurDuProjet</span>(Long projetId, Long acteurId) {
+    <span class="cl">Projet</span> projet = projetRepo.<span class="fn">findById</span>(projetId)
+        .<span class="fn">orElseThrow</span>(() -> <span class="kw">new</span> <span class="cl">RuntimeException</span>(<span class="st">"Projet introuvable"</span>));
+
+    <span class="cm">// Retirer l'acteur de la liste</span>
+    projet.<span class="fn">getActeurs</span>().<span class="fn">removeIf</span>(a -> a.<span class="fn">getId</span>().<span class="fn">equals</span>(acteurId));
+
+    <span class="cm">// Sauvegarder</span>
+    projetRepo.<span class="fn">save</span>(projet);
+}
+
+<span class="cm">// Controller</span>
+<span class="an">@DeleteMapping</span>(<span class="st">"/{projetId}/acteurs/{acteurId}"</span>)
+<span class="kw">public</span> ResponseEntity&lt;Void&gt; <span class="fn">desaffecter</span>(
+        <span class="an">@PathVariable</span> Long projetId,
+        <span class="an">@PathVariable</span> Long acteurId) {
+    service.<span class="fn">desaffecterActeurDuProjet</span>(projetId, acteurId);
+    <span class="kw">return</span> ResponseEntity.<span class="fn">noContent</span>().<span class="fn">build</span>();
+}</pre>
+  </div>
+
+  <!-- DÉFINITIONS POUR L'EXAMEN -->
+  <div class="card" style="border-color:var(--yellow)">
+    <h2>📖 Définitions à Connaître par Cœur</h2>
+    <div class="grid grid-2">
+      <div>
+        <h3>Maven</h3>
+        <p>Outil de build et gestion de dépendances Java. Le <code>pom.xml</code> déclare les dépendances (starters Spring Boot). <code>spring-boot-starter-parent</code> gère les versions compatibles automatiquement.</p>
+        <h3>DTO (Data Transfer Object)</h3>
+        <p>Objet simple qui transporte des données entre couches ou vers l'API. Découple la structure de la BDD de l'API, sécurise (cache les champs sensibles), améliore les performances.</p>
+        <h3>IoC (Inversion of Control)</h3>
+        <p>Le conteneur Spring crée et gère les objets (beans) à la place du développeur. Le code ne crée plus ses propres dépendances avec <code>new</code>.</p>
+      </div>
+      <div>
+        <h3>@Autowired</h3>
+        <p>Spring injecte automatiquement la dépendance correspondante (bean du même type) dans le champ ou constructeur annoté.</p>
+        <h3>JPQL</h3>
+        <p>Langage de requête JPA orienté objet. Utilise les noms des classes Java et attributs (pas SQL). Utilisé avec <code>@Query</code> dans les repositories.</p>
+        <h3>@Transactional</h3>
+        <p>Délimite une transaction. Si une erreur survient, toutes les modifications de la méthode sont annulées (rollback). Obligatoire pour les opérations d'écriture complexes.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AVANTAGES SPRING BOOT (ICON) -->
+  <div class="card" style="border-color:var(--green)">
+    <h2>✅ Avantages de Spring Boot — À Lister</h2>
+    <div class="grid grid-2">
+      <ul>
+        <li>🚀 <strong>Démarrage rapide</strong> — projet opérationnel en minutes</li>
+        <li>⚙️ <strong>Auto-configuration</strong> — pas de XML, configuration automatique</li>
+        <li>📦 <strong>Starters</strong> — dépendances pré-packagées et compatibles</li>
+        <li>🌐 <strong>Serveur embarqué</strong> — Tomcat intégré, jar exécutable</li>
+        <li>🔧 <strong>Convention over configuration</strong> — moins de code boilerplate</li>
+      </ul>
+      <ul>
+        <li>🧪 <strong>Testabilité</strong> — IoC/DI facilitent les tests unitaires</li>
+        <li>🔒 <strong>Couplage faible</strong> — injection de dépendances</li>
+        <li>📊 <strong>Actuator</strong> — monitoring et métriques intégrés</li>
+        <li>🔄 <strong>Productivité</strong> — Spring Data JPA réduit le code d'accès aux données</li>
+        <li>🌍 <strong>Communauté</strong> — large écosystème, documentation riche</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CHECKLIST EXAMEN -->
+  <div class="card" style="border-color:var(--red)">
+    <h2>✅ Checklist Avant l'Examen</h2>
+    <ul style="list-style:none;padding:0">
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais écrire une entité @Entity avec @Id @GeneratedValue</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais créer une association @ManyToMany avec @JoinTable</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais écrire findByXxxContaining dans un @Repository</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais écrire une @Query JPQL avec @Param</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais affecter : findById → getList.add() → save()</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je sais désaffecter : findById → removeIf() → save()</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je connais @EnableScheduling + @Scheduled(cron="0 0 8 * * ?")</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je peux définir : IoC, DI, DTO, JPQL, Maven, AOP</li>
+      <li style="padding:8px 0;border-bottom:1px solid var(--border)">☐ Je connais 5 avantages de Spring Boot</li>
+      <li style="padding:8px 0">☐ Je sais structurer : Entity → Repo → Service → Controller</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// ── BOOT ANIMATION ──
+const logs = [
+  '  .   ____          _            __ _ _',
+  ' /\\\\ / ___\'_ __ _ _(_)_ __  __ _ \\ \\ \\ \\',
+  '( ( )\\___ | \'_ | \'_| | \'_ \\/ _` | \\ \\ \\ \\',
+  ' \\\\/  ___)| |_)| | | | | || (_| |  ) ) ) )',
+  '  \'  |____| .__|_| |_|_| |_\\__, | / / / /',
+  ' =========|_|==============|___/=/_/_/_/',
+  ' :: Spring Boot ::               (v3.2.0)',
+  '',
+  'INFO - Starting Application...',
+  'INFO - The following profiles are active: dev',
+  'INFO - Bootstrapping Spring Data JPA repositories...',
+  'INFO - Finished Spring Data repository scanning — 5 repository interfaces found.',
+  'INFO - HikariPool-1 - Starting...',
+  'INFO - HikariPool-1 - Start completed.',
+  'INFO - Tomcat started on port(s): 8080 (http)',
+  'INFO - Started Application in 2.341 seconds',
+  '',
+  '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+  '  🌿  Created by  : LE CENT 🌿  ',
+  '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+  '',
+  '  ⚠️  WARNING:INCOMPARABLE E CHAY ! so sayeb alik👌 ',
+  '  📚   bonne chance fel examen !💪',
+  '',
+];
+
+let i=0;
+const logEl=document.getElementById('bootLog');
+const bar=document.getElementById('barFill');
+function showLog(){
+  if(i<logs.length){
+    const d=document.createElement('div');
+    d.textContent=logs[i];
+    d.style.animationDelay='0s';
+    d.style.color=
+      logs[i].includes('ESSID YASSINE') ? '#ffffff' :
+      logs[i].includes('━') ? '#6db33f' :
+      logs[i].includes('⚠️') ? '#f85149' :
+      logs[i].includes('📚') ? '#ffa657' :
+      logs[i].includes('INFO') ? '#6db33f' :
+      (logs[i].startsWith(' ')||logs[i].startsWith('(')) ? '#90c050' : '#8b949e';
+    if(logs[i].includes('ESSID YASSINE')){d.style.fontWeight='700';d.style.fontSize='clamp(11px,3vw,14px)';d.style.textAlign='center';}
+    if(logs[i].includes('━')){d.style.textAlign='center';}
+    logEl.appendChild(d);
+    bar.style.width=((i+1)/logs.length*100)+'%';
+    i++;
+    setTimeout(showLog,i<8?80:160);
+  } else {
+    setTimeout(()=>{
+      document.getElementById('boot-screen').style.opacity='0';
+      document.getElementById('boot-screen').style.transition='opacity 1s';
+      setTimeout(()=>document.getElementById('boot-screen').style.display='none',1000);
+    },3500);
+  }
+}
+showLog();
+
+// ── NAV ──
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('nav button[id^="tnav-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  const btn=document.getElementById('tnav-'+id);
+  if(btn)btn.classList.add('active');
+  document.getElementById('navLinks').classList.remove('open');
+  window.scrollTo(0,0);
+}
+function toggleNav(){
+  document.getElementById('navLinks').classList.toggle('open');
+}
+
+// ── EXAM TOGGLE ──
+function toggleExam(header){
+  const body=header.nextElementSibling;
+  body.classList.toggle('open');
+}
+function toggleAns(btn){
+  const box=btn.nextElementSibling;
+  box.classList.toggle('show');
+  btn.textContent=box.classList.contains('show')?'Masquer la réponse':'Voir la réponse';
+}
+function revealAll(btn){
+  const exam=btn.closest('.exam-body');
+  exam.querySelectorAll('.ans-box').forEach(b=>{b.classList.add('show')});
+  exam.querySelectorAll('.ans-toggle').forEach(b=>{b.textContent='Masquer la réponse'});
+  exam.querySelectorAll('.correct-ans').forEach(li=>{li.style.fontWeight='700'});
+}
+
+// ── QUIZ ──
+const questions = [
+  {q:"Quelle annotation combine @Configuration, @EnableAutoConfiguration et @ComponentScan ?",opts:["@SpringBootApplication","@SpringApplication","@BootApplication","@EnableSpring"],ans:0,expl:"@SpringBootApplication est l'annotation principale qui regroupe ces trois annotations."},
+  {q:"Quel est le scope par défaut d'un bean Spring ?",opts:["prototype","request","singleton","session"],ans:2,expl:"Par défaut, les beans Spring sont des singletons — une seule instance partagée dans tout le contexte."},
+  {q:"Quelle annotation injecte automatiquement une dépendance ?",opts:["@Inject","@Autowired","@Resource","Toutes les réponses"],ans:3,expl:"Spring supporte @Autowired (Spring), @Inject (JSR-330) et @Resource (JSR-250)."},
+  {q:"JpaRepository<Acteur, Long> — que représente Long ici ?",opts:["Le type du nom","Le type de l'ID","La version JPA","Le type de la liste"],ans:1,expl:"Le second paramètre générique de JpaRepository est le type de la clé primaire (@Id)."},
+  {q:"Quelle méthode Spring Data génère automatiquement 'SELECT * FROM acteur WHERE nom LIKE %keyword%' ?",opts:["findByNomLike","findByNomContaining","searchByNom","queryNom"],ans:1,expl:"findByNomContaining(String keyword) génère automatiquement une requête LIKE %keyword%."},
+  {q:"En JPQL, 'SELECT a FROM Acteur a' — Acteur désigne quoi ?",opts:["La table SQL acteur","La classe Java Acteur","L'alias de la table","Un stored procedure"],ans:1,expl:"JPQL travaille sur les entités Java (classes), pas directement sur les tables SQL."},
+  {q:"Quelle annotation est OBLIGATOIRE pour activer @Scheduled ?",opts:["@EnableAsync","@EnableScheduling","@EnableJpa","@EnableTasks"],ans:1,expl:"Sans @EnableScheduling sur la classe principale (ou une @Configuration), les méthodes @Scheduled ne s'exécutent jamais."},
+  {q:"Que fait 'projet.getActeurs().removeIf(a -> a.getId().equals(acteurId))' ?",opts:["Supprime l'acteur de la BDD","Retire l'acteur de la liste du projet","Désactive l'acteur","Rien, il faut DELETE FROM"],ans:1,expl:"removeIf retire l'élément de la liste Java. Il faut ensuite appeler save() pour persister le changement en BDD."},
+  {q:"Quelle expression cron correspond à 'tous les jours à 8h' ?",opts:["0 8 0 * * ?","0 0 8 * * ?","8 0 0 * * ?","0 0 * 8 * ?"],ans:1,expl:"Format cron : sec min heure jour mois jour-semaine. '0 0 8 * * ?' = 0sec 0min 8h chaque jour."},
+  {q:"Un DTO sert principalement à :",opts:["Remplacer l'entité en BDD","Transporter des données entre couches sans exposer la structure interne","Définir les associations JPA","Configurer les beans Spring"],ans:1,expl:"Le DTO (Data Transfer Object) découple l'API de la structure interne des entités JPA."},
+  {q:"Quelle annotation marque la couche d'accès aux données ET traduit les exceptions JPA ?",opts:["@Component","@Service","@Repository","@Controller"],ans:2,expl:"@Repository active la traduction des exceptions d'accès aux données en DataAccessException Spring."},
+  {q:"@Aspect seul suffit-il pour créer un aspect Spring AOP ?",opts:["Oui","Non, il faut aussi @Component","Non, il faut @Service","Non, il faut @Bean"],ans:1,expl:"@Aspect déclare la classe comme aspect, mais @Component (ou équivalent) est nécessaire pour que Spring la détecte comme bean."},
+];
+
+function buildQuiz(){
+  const c=document.getElementById('quizContainer');
+  c.innerHTML='';
+  questions.forEach((q,i)=>{
+    c.innerHTML+=`<div class="q-card" id="qc${i}">
+      <div class="qtext">${i+1}. ${q.q}</div>
+      <div class="opts">${q.opts.map((o,j)=>`<label id="ql${i}_${j}"><input type="radio" name="q${i}" value="${j}"> ${o}</label>`).join('')}</div>
+      <div class="expl" id="qe${i}">${q.expl}</div>
+    </div>`;
+  });
+}
+buildQuiz();
+
+function submitQuiz(){
+  let score=0;
+  questions.forEach((q,i)=>{
+    const sel=document.querySelector(`input[name="q${i}"]:checked`);
+    const expl=document.getElementById('qe'+i);
+    expl.style.display='block';
+    q.opts.forEach((_,j)=>{
+      const lbl=document.getElementById(`ql${i}_${j}`);
+      if(j===q.ans){lbl.classList.add('correct');}
+      else if(sel&&parseInt(sel.value)===j){lbl.classList.add('wrong');}
+    });
+    if(sel&&parseInt(sel.value)===q.ans)score++;
+  });
+  const sc=document.getElementById('quizScore');
+  sc.style.display='block';
+  document.getElementById('scoreText').textContent=`${score} / ${questions.length}`;
+  const pct=Math.round(score/questions.length*100);
+  document.getElementById('scorePct').textContent=pct>=70?`✅ ${pct}% — Bien préparé !`:`⚠️ ${pct}% — Révise encore !`;
+  document.getElementById('quizActions').style.display='none';
+  sc.scrollIntoView({behavior:'smooth'});
+}
+
+function resetQuiz(){
+  document.getElementById('quizScore').style.display='none';
+  document.getElementById('quizActions').style.display='block';
+  buildQuiz();
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
